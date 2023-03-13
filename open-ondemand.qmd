@@ -1,13 +1,33 @@
 ---
-title: "From entering VSC to running a Jupyter notebook that accesses ManGO"
+title: "ManGO, HPC and Open OnDemand"
 format: pdf
 ---
 
-In the interactive Shell that gives you access to the HPC, go to the Data directory. This is always recommended to start because it has more storage than the home directory.
+This document gives you instructions on how to
+
+- [Set up the conda environment](#conda) in the HPC
+- [Authenticate to ManGO](#mango) with the command line
+- [Request a job](#job) in Open OnDemand with the Jupyter Lab
+
+# Install conda and create an environment {#conda}
+
+In the interactive Shell that gives you access to the HPC, go to the Data directory. This is always recommended when you access the HPC via the command line because it has more storage than the home directory.
 
 ```sh
 cd $VSC_DATA
 ```
+
+The `$VSC_DATA` path is equivalent to `/data/leuven/3xx/vsc3xxxx`, with `vsc3xxxx` your VSC-account number, and `3xx` its first three numbers.
+
+::: callout-tip
+## Scratch
+
+For even more (but temporary) storage, you can access SCRATCH, with `cd $VSC_SCRATCH`. If you want to download large parts of your datasets, it's best to do that there.
+
+This path is equivalent to `/scratch/leuven/3xx/vsc3xxxx`.
+
+:::
+
 
 [Install Miniconda](https://docs.vscentrum.be/en/latest/software/python_package_management.html?highlight=miniconda#install-miniconda) and if it's successful (which can be checked with `which conda`) create an environment.
 
@@ -18,13 +38,13 @@ bash Miniconda3-latest-Linux-x86_64.sh -b -p $VSC_DATA/miniconda3
 export PATH="${VSC_DATA}/miniconda3/bin:${PATH}"
 ```
 
-To create an environment called "irods", run the code below. (I add ‘numpy’ to make sure that it doesn’t use the default Python version, but it could be another package or a version specification.)
+To create an environment called "irods", run the code below. Here we already install `numpy` (which you will probably need) and `ipykernel` (which you definitely need to use JupyterLab) already.
 
 ```sh
 conda create -n irods numpy ipykernel
 ```
 
-Enter the environment and install the Python client.
+Activate the environment and install the Python client. This cannot be installed by just chaining `python-irodsclient` to the `conda create` call.
 
 ```sh
 conda activate irods
@@ -33,13 +53,15 @@ pip install python-irodsclient
 
 If everything has been successful, you can now write Python scripts that communicate with ManGO!
 
-The final step is to add the kernel for the Jupyter Notebook to the right directory for the one in Open OnDemand to access it.
+The final step is to add the kernel for the Jupyter Notebook to the right directory for Open OnDemand to access it.
 
 ```sh
 python -m ipykernel install  --prefix=${VSC_HOME}/.local/ --name 'irods'
 ```
 
-Finally, you can authenticate in ManGO by copying the corresponding snippet from "How to connect" in <mango.kuleuven.be>. It will look something like the following snippet (with your username and temporary passwords in "USERNAME" and "PASSWORD").
+# Authenticate to ManGO {#mango}
+
+You can authenticate to ManGO by copying the corresponding snippet from "How to connect" in <https://mango.kuleuven.be>. It will look something like the following snippet (with your username and temporary passwords in `"USERNAME"` and `"TOKEn"`).
 
 ```sh
 mkdir -p ~/.irods
@@ -67,3 +89,20 @@ iinit -h | grep Version | grep -v -q 4.2. || sed -i 's/"irods_authentication_sch
 echo 'TOKEN' | iinit --ttl 168 >/dev/null && echo You are now authenticated
 to irods. Your session is valid for 168 hours.
 ```
+
+# Request a Job in OOD {#jupyter}
+
+In <https://ondemand.hpc.kuleuven.be/>, go to "My Interactive Sessions > Jupyter Lab" and fill the right fields in the form.
+
+Field | CPU | GPU
+----- | ----- | -----
+Cluster | genius | genius
+Account | lp_bib_hack | lp_bib_hack
+Partition | bigmem | gpu_p100
+Number of hours | (whatever you need) | (whatever you need)
+Number of cores | 1 + | 9 per GPU
+Required memory per core in MB | 3400 | 5000 (or default)
+Number of nodes | 1 | 1
+Number of GPUs | 0 | <= 4
+Reservation | lp_bib_hack | lp_bib_hack
+
