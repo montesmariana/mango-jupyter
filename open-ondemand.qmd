@@ -1,0 +1,69 @@
+---
+title: "From entering VSC to running a Jupyter notebook that accesses ManGO"
+format: pdf
+---
+
+In the interactive Shell that gives you access to the HPC, go to the Data directory. This is always recommended to start because it has more storage than the home directory.
+
+```sh
+cd $VSC_DATA
+```
+
+[Install Miniconda](https://docs.vscentrum.be/en/latest/software/python_package_management.html?highlight=miniconda#install-miniconda) and if it's successful (which can be checked with `which conda`) create an environment.
+
+```sh
+# installation
+wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
+bash Miniconda3-latest-Linux-x86_64.sh -b -p $VSC_DATA/miniconda3
+export PATH="${VSC_DATA}/miniconda3/bin:${PATH}"
+```
+
+To create an environment called "irods", run the code below. (I add ‘numpy’ to make sure that it doesn’t use the default Python version, but it could be another package or a version specification.)
+
+```sh
+conda create -n irods numpy ipykernel
+```
+
+Enter the environment and install the Python client.
+
+```sh
+conda activate irods
+pip install python-irodsclient
+```
+
+If everything has been successful, you can now write Python scripts that communicate with ManGO!
+
+The final step is to add the kernel for the Jupyter Notebook to the right directory for the one in Open OnDemand to access it.
+
+```sh
+python -m ipykernel install  --prefix=${VSC_HOME}/.local/ --name 'irods'
+```
+
+Finally, you can authenticate in ManGO by copying the corresponding snippet from "How to connect" in <mango.kuleuven.be>. It will look something like the following snippet (with your username and temporary passwords in "USERNAME" and "PASSWORD").
+
+```sh
+mkdir -p ~/.irods
+cat > ~/.irods/irods_environment.json <<'EOF'
+{
+    "irods_host": "ghum.irods.icts.kuleuven.be",
+    "irods_port": 1247,
+    "irods_zone_name": "ghum",
+    "irods_authentication_scheme": "pam_password",
+    "irods_encryption_algorithm": "AES-256-CBC",
+    "irods_encryption_salt_size": 8,
+    "irods_encryption_key_size": 32,
+    "irods_encryption_num_hash_rounds": 8,
+    "irods_user_name": "USERNAME",
+    "irods_ssl_ca_certificate_file": "",
+    "irods_ssl_verify_server": "cert",
+    "irods_client_server_negotiation": "request_server_negotiation",
+    "irods_client_server_policy": "CS_NEG_REQUIRE",
+    "irods_default_resource": "default",
+    "irods_cwd": "/ghum/home"
+}
+EOF
+iinit -h | grep Version | grep -v -q 4.2. || sed -i 's/"irods_authentication_scheme":
+"pam_password"/"irods_authentication_scheme": "PAM"/' ~/.irods/irods_environment.json
+echo 'TOKEN' | iinit --ttl 168 >/dev/null && echo You are now authenticated
+to irods. Your session is valid for 168 hours.
+```
